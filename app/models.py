@@ -11,6 +11,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     created_at    = db.Column(db.DateTime, default=datetime.utcnow)
 
+    tasks = db.relationship("Task", backref="owner", lazy=True, cascade="all, delete-orphan")
 
 
 
@@ -25,3 +26,5 @@ class Task(db.Model):
     status      = db.Column(db.String(20),  default="pending")  # pending / in_progress / completed
     created_at  = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at  = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
