@@ -20,7 +20,8 @@ def create_app():
 
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
-    
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
 
     from app.routes.auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
