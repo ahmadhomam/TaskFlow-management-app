@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Task Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="login-bg">
+    <div class="login-container">
+        <div class="header">
+            <h2>Sign In</h2>
+            <p>Enter your details to manage your tasks</p>
+        </div>
+
+        <div id="msg-box" class="alert-box" style="display: none;"></div>
+
+        <div class="input-group">
+            <label for="user">Username</label>
+            <input type="text" id="user" placeholder="Your username...">
+        </div>
+        
+        <div class="input-group">
+            <label for="pw">Password</label>
+            <input type="password" id="pw" placeholder="Your password...">
+        </div>
+
+        <button id="login-btn" class="main-btn">Login</button>
+        
+        <div class="footer-links">
+            <span>New here? <a href="/register">Create account</a></span>
+        </div>
+    </div>
+
+    <script>
+        const loginBtn = document.getElementById('login-btn');
+        const msgBox = document.getElementById('msg-box');
+
+        const doLogin = async () => {
+            const username = document.getElementById('user').value;
+            const password = document.getElementById('pw').value;
+
+            if (!username || !password) {
+                msgBox.innerText = "Don't leave fields empty!";
+                msgBox.style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    window.location.href = '/dashboard';
+                } else {
+                    msgBox.innerText = result.error || "Wrong username or password";
+                    msgBox.style.display = 'block';
+                }
+            } catch (err) {
+                console.error("Login error:", err);
+                msgBox.innerText = "Server error, try again later.";
+                msgBox.style.display = 'block';
+            }
+        };
+
+        loginBtn.addEventListener('click', doLogin);
+
+        // Quick enter-key submit
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') doLogin();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Task Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="auth-wrapper">
+    <div class="signup-box">
+        <div class="header">
+            <h2>Create Account</h2>
+            <p>Join TaskFlow and get organized</p>
+        </div>
+
+        <div id="err-msg" class="alert alert-danger" style="display: none;"></div>
+        <div id="success-msg" class="alert alert-success" style="display: none;"></div>
+
+        <div class="field">
+            <label>Username</label>
+            <input type="text" id="uname" placeholder="Pick a username">
+        </div>
+        
+        <div class="field">
+            <label>Email Address</label>
+            <input type="email" id="u-email" placeholder="name@example.com">
+        </div>
+
+        <div class="field">
+            <label>Password</label>
+            <input type="password" id="u-pass" placeholder="At least 6 characters">
+        </div>
+
+        <button id="signup-btn" class="btn-main">Get Started</button>
+        
+        <div class="footer">
+            <p>Already a member? <a href="/">Login here</a></p>
+        </div>
+    </div>
+
+    <script>
+        const signupBtn = document.getElementById('signup-btn');
+        const errLabel = document.getElementById('err-msg');
+        const successLabel = document.getElementById('success-msg');
+
+        const handleSignup = async () => {
+            const username = document.getElementById('uname').value.trim();
+            const email = document.getElementById('u-email').value.trim();
+            const password = document.getElementById('u-pass').value;
+
+            // Simple validation
+            if (!username || !email || !password) {
+                showFeedback("Fill out all fields, please.", 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showFeedback("Password is too short (min 6 chars).", 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showFeedback("Account created! Redirecting to login...", 'success');
+                    setTimeout(() => window.location.href = "/", 2000);
+                } else {
+                    showFeedback(data.error || "Signup failed.", 'error');
+                }
+            } catch (err) {
+                console.error("Signup error:", err);
+                showFeedback("Server is down. Try again later.", 'error');
+            }
+        };
+
+        function showFeedback(msg, type) {
+            if (type === 'error') {
+                errLabel.innerText = msg;
+                errLabel.style.display = 'block';
+                successLabel.style.display = 'none';
+            } else {
+                successLabel.innerText = msg;
+                successLabel.style.display = 'block';
+                errLabel.style.display = 'none';
+            }
+        }
+
+        signupBtn.addEventListener('click', handleSignup);
+    </script>
+</body>
+</html>

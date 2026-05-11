@@ -46,3 +46,15 @@ class Task(db.Model):
     updated_at  = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    def to_dict(self):
+        return {
+            "id":          self.id,
+            "title":       self.title,
+            "description": self.description,
+            "priority":    self.priority,
+            "status":      self.status,
+            "created_at":  self.created_at.strftime("%Y-%m-%d %H:%M"),
+            "updated_at":  self.updated_at.strftime("%Y-%m-%d %H:%M"),
+            "user_id":     self.user_id,
+        }

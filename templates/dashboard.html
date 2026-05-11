@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - TaskFlow</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="brand">✅ TaskFlow</div>
+    <div class="user-controls">
+        <span class="username">Welcome, {{ current_user.username }}</span>
+        <span id="conn-status" class="status-dot offline"></span>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+</nav>
+
+<section class="stats-bar" id="analytics-section">
+    <div class="card">
+        <h4 id="count-total">-</h4>
+        <p>Total Tasks</p>
+    </div>
+    <div class="card success">
+        <h4 id="count-done">-</h4>
+        <p>Completed</p>
+    </div>
+    <div class="card warning">
+        <h4 id="count-pending">-</h4>
+        <p>Pending</p>
+    </div>
+    <div class="card info">
+        <h4 id="count-progress">-</h4>
+        <p>In Progress</p>
+    </div>
+    <div class="card primary">
+        <h4 id="count-pct">-%</h4>
+        <p>Completion</p>
+    </div>
+</section>
+
+<main class="dashboard-main">
+    <div class="add-task-box">
+        <h3>Create New Task</h3>
+        <div class="input-row">
+            <input type="text" id="new-title" placeholder="What needs to be done?">
+            <select id="new-priority">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+            </select>
+            <button class="add-btn" onclick="addTask()">Add</button>
+        </div>
+        <textarea id="new-desc" placeholder="Extra details... (optional)"></textarea>
+    </div>
+
+    <div class="filters">
+        <button class="filter-link active" onclick="updateFilter(this, 'all')">All</button>
+        <button class="filter-link" onclick="updateFilter(this, 'pending')">Pending</button>
+        <button class="filter-link" onclick="updateFilter(this, 'in_progress')">In Progress</button>
+        <button class="filter-link" onclick="updateFilter(this, 'completed')">Completed</button>
+    </div>
+
+    <div id="toast-notify" class="toast hidden"></div>
+
+    <div id="task-container" class="task-grid">
+        <p class="loading-msg">Fetching tasks...</p>
+    </div>
+</main>
+
+<div id="modal-bg" class="modal-overlay hidden">
+    <div class="edit-box">
+        <h3>Update Task</h3>
+        <input type="hidden" id="edit-id">
+        <div class="form-item">
+            <label>Title</label>
+            <input type="text" id="edit-title">
+        </div>
+        <div class="form-item">
+            <label>Description</label>
+            <textarea id="edit-desc"></textarea>
+        </div>
+        <div class="form-row">
+            <div class="form-item">
+                <label>Priority</label>
+                <select id="edit-priority">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+            <div class="form-item">
+                <label>Status</label>
+                <select id="edit-status">
+                    <option value="pending">Pending</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-btns">
+            <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+            <button class="save-btn" onclick="saveTask()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentTasks = [];
+let filterMode = "all";
+
+// Setup WebSockets
+const socket = io();
+
+socket.on("connect", () => {
+    document.getElementById("conn-status").className = "status-dot online";
+});
+
+socket.on("disconnect", () => {
+    document.getElementById("conn-status").className = "status-dot offline";
+});
+
+// Live updates from server
+socket.on("task_update", (data) => {
+    const { action, task } = data;
+    
+    if (action === "created") {
+        currentTasks.unshift(task);
+    } else if (action === "updated") {
+        currentTasks = currentTasks.map(t => t.id === task.id ? task : t);
+    } else if (action === "deleted") {
+        currentTasks = currentTasks.filter(t => t.id !== task.id);
+    }
+
+    drawTasks();
+    refreshAnalytics();
+    notify(`Task was ${action}!`);
+});
+
+// Initial data load
+async function loadData() {
+    const res = await fetch("/api/tasks/", { credentials: 'same-origin' });
+    const json = await res.json();
+    if (res.ok) {
+        currentTasks = json.tasks;
+        drawTasks();
+    }
+}
+
+async function refreshAnalytics() {
+    const res = await fetch("/api/tasks/analytics", { credentials: 'same-origin' });
+    const d = await res.json();
+    if (res.ok) {
+        document.getElementById("count-total").innerText = d.total;
+        document.getElementById("count-done").innerText = d.completed;
+        document.getElementById("count-pending").innerText = d.pending;
+        document.getElementById("count-progress").innerText = d.in_progress;
+        document.getElementById("count-pct").innerText = d.completion_percentage + "%";
+    }
+}
+
+function drawTasks() {
+    const container = document.getElementById("task-container");
+    const tasks = filterMode === "all" ? currentTasks : currentTasks.filter(t => t.status === filterMode);
+
+    if (!tasks.length) {
+        container.innerHTML = `<p class="empty">No tasks to show.</p>`;
+        return;
+    }
+
+    container.innerHTML = tasks.map(t => `
+        <div class="task-card p-${t.priority}">
+            <div class="content">
+                <h4>${t.title}</h4>
+                <p>${t.description || ''}</p>
+                <div class="tags">
+                    <span class="tag-priority">${t.priority}</span>
+                    <span class="tag-status">${t.status}</span>
+                </div>
+            </div>
+            <div class="actions">
+                <button onclick='openEdit(${JSON.stringify(t)})'>Edit</button>
+                <button class="del-btn" onclick="deleteTask(${t.id})">Delete</button>
+            </div>
+        </div>
+    `).join("");
+}
+
+async function addTask() {
+    const title = document.getElementById("new-title").value;
+    const desc = document.getElementById("new-desc").value;
+    const priority = document.getElementById("new-priority").value;
+
+    if (!title) return alert("Title is needed");
+
+    await fetch("/api/tasks/", {
+        method: "POST",
+        credentials: 'same-origin',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, description: desc, priority })
+    });
+
+    document.getElementById("new-title").value = "";
+    document.getElementById("new-desc").value = "";
+}
+
+function openEdit(task) {
+    document.getElementById("edit-id").value = task.id;
+    document.getElementById("edit-title").value = task.title;
+    document.getElementById("edit-desc").value = task.description;
+    document.getElementById("edit-priority").value = task.priority;
+    document.getElementById("edit-status").value = task.status;
+    document.getElementById("modal-bg").classList.remove("hidden");
+}
+
+function closeModal() {
+    document.getElementById("modal-bg").classList.add("hidden");
+}
+
+async function saveTask() {
+    const id = document.getElementById("edit-id").value;
+    const payload = {
+        title: document.getElementById("edit-title").value,
+        description: document.getElementById("edit-desc").value,
+        priority: document.getElementById("edit-priority").value,
+        status: document.getElementById("edit-status").value
+    };
+
+    await fetch(`/api/tasks/${id}`, {
+        method: "PUT",
+        credentials: 'same-origin',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    });
+    closeModal();
+}
+
+async function deleteTask(id) {
+    if (confirm("Delete this?")) {
+        await fetch(`/api/tasks/${id}`, { method: "DELETE", credentials: 'same-origin' });
+    }
+}
+
+async function logout() {
+    await fetch("/api/auth/logout", { method: "POST", credentials: 'same-origin' });
+    window.location.href = "/";
+}
+
+function updateFilter(btn, filter) {
+    filterMode = filter;
+    document.querySelectorAll(".filter-link").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    drawTasks();
+}
+
+function notify(msg) {
+    const el = document.getElementById("toast-notify");
+    el.innerText = msg;
+    el.classList.remove("hidden");
+    setTimeout(() => el.classList.add("hidden"), 2500);
+}
+
+// Start everything
+loadData();
+refreshAnalytics();
+</script>
+</body>
+</html>
