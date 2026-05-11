@@ -28,6 +28,10 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         """Return True if the given password matches the stored hash."""
         return check_password_hash(self.password_hash, password)
+    
+    def to_dict(self):
+        return {"id": self.id, "username": self.username, "email": self.email}
+
 
 class Task(db.Model):
     """Stores tasks belonging to a user."""

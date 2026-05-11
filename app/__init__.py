@@ -25,7 +25,13 @@ def create_app():
 
 
     from app.routes.auth import auth_bp
+    from app.routes.tasks import tasks_bp
+    from app.routes.views import views_bp
+
+
     app.register_blueprint(auth_bp,  url_prefix="/api/auth")
+    app.register_blueprint(tasks_bp, url_prefix="/api/tasks")
+    app.register_blueprint(views_bp) 
 
     with app.app_context():
         from app import models
