@@ -23,6 +23,10 @@ def create_app():
     login_manager.init_app(app)
     socketio.init_app(app, cors_allowed_origins="*")
 
+
+    from app.routes.auth import auth_bp
+    app.register_blueprint(auth_bp,  url_prefix="/api/auth")
+
     with app.app_context():
         from app import models
         db.create_all()
