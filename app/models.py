@@ -1,5 +1,13 @@
 from app import db, login_manager
 from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+
+# Flask-Login needs this to reload a user from the session
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
 
 class User(UserMixin, db.Model):
     """Stores registered users."""
@@ -13,7 +21,13 @@ class User(UserMixin, db.Model):
 
     tasks = db.relationship("Task", backref="owner", lazy=True, cascade="all, delete-orphan")
 
+    def set_password(self, password):
+        """Hash and store the password — never store plain text!"""
+        self.password_hash = generate_password_hash(password)
 
+    def check_password(self, password):
+        """Return True if the given password matches the stored hash."""
+        return check_password_hash(self.password_hash, password)
 
 class Task(db.Model):
     """Stores tasks belonging to a user."""

@@ -14,19 +14,17 @@ socketio = SocketIO()
 
 def create_app():
     app = Flask(__name__)
-    db.init_app(app)       # bound INSIDE create_app
-    login_manager.init_app(app)
-    socketio.init_app(app)
 
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-
-    from app.routes.auth import auth_bp
-    app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    db.init_app(app)       # bound INSIDE create_app
+    login_manager.init_app(app)
+    socketio.init_app(app, cors_allowed_origins="*")
 
     with app.app_context():
+        from app import models
         db.create_all()
     
     return app
