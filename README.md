@@ -44,11 +44,11 @@ Create a .env file in the root directory and paste this (replace with your actua
 python run.py
 
 ### Screenshots
-![Dashboard_01](<Screenshot 2026-05-11 223330.png>)
-![Dashboard_02](image.png)
-![Loginpage_01](<Screenshot 2026-05-11 223347.png>)
-![Loginpage_02](<Screenshot 2026-05-11 223403.png>)
-![Loginpage_03](<Screenshot 2026-05-11 223429.png>)
+![Dashboard_01](res/Screenshot%202026-05-11%20223330.png)
+![Dashboard_02](res/image.png)
+![Loginpage_01](res/Screenshot%202026-05-11%20223347.png)
+![Loginpage_02](res/Screenshot%202026-05-11%20223403.png)
+![Loginpage_03](res/Screenshot%202026-05-11%20223429.png)
 
 
 
